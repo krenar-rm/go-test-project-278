@@ -1,0 +1,33 @@
+{
+  "name": "krenar_url_shorter",
+  "version": "1.0.0",
+  "description": "URL Shortener with Go backend and React frontend",
+  "main": "index.js",
+  "scripts": {
+    "frontend": "node node_modules/@hexlet/project-url-shortener-frontend/bin/start.js",
+    "backend": "go run main.go",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "test": "go test -v ./..."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krenar-rm/go-test-project-278.git"
+  },
+  "keywords": [
+    "url-shortener",
+    "go",
+    "react",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/krenar-rm/go-test-project-278/issues"
+  },
+  "homepage": "https://github.com/krenar-rm/go-test-project-278#readme",
+  "dependencies": {
+    "@hexlet/project-url-shortener-frontend": "^1.0.0",
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,29 @@
+:80
+
+# Статика фронтенда
+root * /app/public
+
+# API и редиректы идут в бэкенд
+@backend {
+    path /api/*
+    path /r/*
+    path /ping
+    path /sentry-test
+    path /sentry-panic
+}
+
+handle @backend {
+    reverse_proxy localhost:8080
+}
+
+# Статические файлы
+handle /assets/* {
+    file_server
+}
+
+# Все остальные запросы - отдаем index.html (для SPA)
+handle {
+    try_files {path} /index.html
+    file_server
+}
+

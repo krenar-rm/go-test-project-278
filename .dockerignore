@@ -1,0 +1,31 @@
+# Git
+.git
+.github
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Test files
+*_test.go
+coverage.out
+coverage.html
+
+# Build artifacts
+url-shortener
+*.exe
+
+# Development
+Makefile
+.golangci.yml
+
