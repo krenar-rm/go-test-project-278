@@ -9,7 +9,7 @@
 
 **Работающий сервис:** https://go-test-project-278.onrender.com/
 
-## 🚀 Возможности
+## Возможности
 
 - REST API для управления ссылками
 - Web UI (React Admin)
@@ -19,13 +19,13 @@
 - Docker + Caddy
 - CI/CD + Sentry
 
-## 🛠 Технологии
+## Технологии
 
 - **Backend:** Go 1.24, Gin, PostgreSQL, sqlc
 - **Frontend:** React Admin
 - **Deploy:** Docker, Caddy, Render
 
-## 📦 Быстрый старт
+## Быстрый старт
 
 ```bash
 # Установка
@@ -48,7 +48,7 @@ make dev
 - **Backend API:** http://localhost:8080
 - **Frontend UI:** http://localhost:5173
 
-## 📝 API Endpoints
+## API Endpoints
 
 ```bash
 GET  /ping                # Health check
@@ -73,18 +73,18 @@ BASE_URL=https://your-app.onrender.com
 DATABASE_URL=<postgresql-url>
 ```
 
-## 📚 Документация
+## Документация
 
 - `ENV_SETUP.md` - настройка переменных окружения
 - `env.example` - шаблон конфигурации
 
-## 🧪 Тестирование
+## Тестирование
 
 ```bash
 go test -v ./...
 golangci-lint run
 ```
 
-## 📄 Лицензия
+## Лицензия
 
 Проект создан в рамках обучения на [Hexlet](https://hexlet.io/).
