@@ -4,7 +4,7 @@ WORKDIR /build/code
 
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
-go mod download
+go mod download all
 
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
