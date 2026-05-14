@@ -1,10 +1,10 @@
-FROM golang:1.25-alpine AS backend-builder
+FROM golang:1.26-alpine AS backend-builder
 RUN apk add --no-cache git
 WORKDIR /build/code
 
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
-go mod download all
+go mod download
 
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
