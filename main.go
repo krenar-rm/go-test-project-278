@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -19,10 +20,6 @@ import (
 func main() {
 	// подключаемся с БД
 	var err error
-	dbUrl := os.Getenv("DATABASE_URL")
-	if dbUrl == "" {
-		log.Fatal("DATABASE_URL не установлена")
-	}
 
 	// Инициализация пула соединений
 	conn, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
@@ -50,7 +47,7 @@ func main() {
 	router.Use(gin.Recovery())
 	// подулючаем логгер
 	router.Use(gin.Logger())
-	// создаём точку входа
+	// маршрут для получения всех записей
 	router.GET("/api/links", func(c *gin.Context) {
 		links, err := queries.ListLinks(c)
 		if err == sql.ErrNoRows {
@@ -62,6 +59,75 @@ func main() {
 			return
 		}
 		c.JSON(http.StatusOK, links)
+	})
+	// маршрут для добавления новой записи
+	router.POST("/api/links", func(c *gin.Context) {
+		var link generated.CreateLinkParams
+		if err := c.ShouldBindJSON(&link); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		id, err := queries.CreateLink(c, link)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusCreated, id)
+	})
+	// маршрут для изменения записи
+	router.PUT("/api/links/:id", func(c *gin.Context) {
+		var updLink generated.UpdateLinkParams
+		idStr := c.Param("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		updLink.ID = id
+		if err := c.ShouldBindJSON(&updLink); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		res := queries.UpdateLink(c, updLink)
+		if res != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, res)
+	})
+	// маршрут для получения одной записи
+	router.GET("/api/links/:id", func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		link, err := queries.GetLink(c, id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "link not found",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, link)
+	})
+	// маршрут для удаления записи
+	router.DELETE("/api/links/:id", func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		err = queries.DeleteLink(c, id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "link has not been removed",
+			})
+			return
+		}
+		c.JSON(http.StatusNoContent, id)
 	})
 	// запускаем сервер на порту 8080
 	router.Run(":8080")
