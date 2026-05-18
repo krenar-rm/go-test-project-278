@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -37,7 +38,44 @@ func setupRouter() *gin.Engine {
 // получение всех записей
 func listLinks(db *generated.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		links, err := db.ListLinks(c)
+		var paginParams generated.ListLinksParams
+		// получаем параметры для пагинации
+		rangeLinks := c.Query("range")
+		// задаём параметры по умолчанию
+		limit := 10
+		offset := 0
+		idx0 := 0
+		idx1 := 10
+		// считываем параметры из тела запроса
+		str := strings.Index(rangeLinks, "[")
+		end := strings.Index(rangeLinks, "]")
+		// получаем лимит записей на странице и сдвиг для вывода записей
+		// проверяем корректность ввода данных
+		if str != -1 && end != -1 && int(rangeLinks[str+1]) >= 0 && int(rangeLinks[str-1]) >= 0 {
+			idx0 = int(rangeLinks[str+1])
+			idx1 = int(rangeLinks[str-1])
+			if idx1 > idx0 {
+				limit = idx1 - idx0
+				offset = idx0
+			}
+			if idx0 == idx1 {
+				limit = 1
+				offset = idx0
+			}
+			if idx0 > idx1 {
+				idx0 = 0
+				idx1 = 10
+				limit = 10
+				offset = 0
+			}
+		}
+		// ограничение максимального числа записей на странице
+		if limit > 20 {
+			limit = 20
+		}
+		paginParams.Limit = int32(limit)
+		paginParams.Offset = int32(offset)
+		links, err := db.ListLinks(c, paginParams)
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "links not found"})
 			return
@@ -46,7 +84,14 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 			return
 		}
+		count, err := db.CounterLinks(c)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to count the number of records"})
+			return
+		}
+		headerVal := fmt.Sprintf("links: %d-%d/%d", idx0, idx1, count)
 		c.JSON(http.StatusOK, links)
+		c.Header("Content-Range", headerVal)
 	}
 }
 

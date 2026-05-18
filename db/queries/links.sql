@@ -6,7 +6,8 @@ WHERE id = $1 LIMIT 1;
 -- name: ListLinks :many
 SELECT id, original_url, short_name, short_url 
 FROM links
-ORDER BY id;
+ORDER BY id
+LIMIT $1 OFFSET $2;
 
 -- name: CreateLink :one
 INSERT INTO links (
@@ -24,3 +25,6 @@ WHERE id = $1;
 -- name: DeleteLink :exec
 DELETE FROM links
 WHERE id = $1;
+
+-- name: CounterLinks :one
+SELECT COUNT(*) FROM links;

@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const counterLinks = `-- name: CounterLinks :one
+SELECT COUNT(*) FROM links
+`
+
+func (q *Queries) CounterLinks(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, counterLinks)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createLink = `-- name: CreateLink :one
 INSERT INTO links (
 original_url, short_name
@@ -71,7 +82,13 @@ const listLinks = `-- name: ListLinks :many
 SELECT id, original_url, short_name, short_url 
 FROM links
 ORDER BY id
+LIMIT $1 OFFSET $2
 `
+
+type ListLinksParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
 
 type ListLinksRow struct {
 	ID          int64       `json:"id"`
@@ -80,8 +97,8 @@ type ListLinksRow struct {
 	ShortUrl    pgtype.Text `json:"short_url"`
 }
 
-func (q *Queries) ListLinks(ctx context.Context) ([]ListLinksRow, error) {
-	rows, err := q.db.Query(ctx, listLinks)
+func (q *Queries) ListLinks(ctx context.Context, arg ListLinksParams) ([]ListLinksRow, error) {
+	rows, err := q.db.Query(ctx, listLinks, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
