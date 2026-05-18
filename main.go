@@ -40,19 +40,17 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var paginParams generated.ListLinksParams
 		// получаем параметры для пагинации
-		rangeLinks := c.Query("range")
+		rangeLinks := c.DefaultQuery("range", "[0,20]")
 		// задаём параметры по умолчанию
-		limit := 10
+		limit := 20
 		offset := 0
-		idx0 := 0
-		idx1 := 10
 		// задаём регулярное выражение для поиска всех чисел
 		re := regexp.MustCompile(`\d+`)
 		// получаем лимит записей на странице и сдвиг для вывода записей
 		numRange := re.FindAllString(rangeLinks, -1)
 		// проверяем корректность ввода данных
 		if len(numRange) != 2 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "the range must be specified by two numbers, example: [1–4]"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "the range must be specified by two numbers, example: [1,4]"})
 			return
 		}
 		idx0, err := strconv.Atoi(numRange[0])
@@ -60,7 +58,7 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid range value 1"})
 			return
 		}
-		idx1, err = strconv.Atoi(numRange[1])
+		idx1, err := strconv.Atoi(numRange[1])
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid range value 2"})
 			return
