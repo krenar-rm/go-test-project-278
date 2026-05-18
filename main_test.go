@@ -258,3 +258,147 @@ func TestDeleteLinkWrong(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, response)
 }
+
+func TestPaginationGeLinksRight(t *testing.T) {
+	ctx := context.Background()
+	// очистка данных перед тестом
+	_, err := db.Exec(ctx, "DELETE FROM links")
+	assert.NoError(t, err)
+
+	// добавление тестовых данных
+	_, err = db.Exec(ctx, "INSERT INTO links (original_url, short_name) VALUES ('https://example.com/long-url', 'exmpl'), ('https://example.com/long-url1', 'exmpl1'), ('https://example.com/long-url2', 'exmpl2'), ('https://example.com/long-url3', 'exmpl3'), ('https://example.com/long-url4', 'exmpl4'), ('https://example.com/long-url5', 'exmpl5'), ('https://example.com/long-url6', 'exmpl6'), ('https://example.com/long-url7', 'exmpl7')")
+	assert.NoError(t, err)
+
+	// выполнение запроса
+	r, _ := http.NewRequest(http.MethodGet, "/api/links?range=[0,2]", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	// проверка результатов
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response []map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	want := []map[string]any{{"id": float64(1), "original_url": "https://example.com/long-url", "short_name": "exmpl", "short_url": nil}, {"id": float64(2), "original_url": "https://example.com/long-url1", "short_name": "exmpl1", "short_url": nil}}
+	assert.NoError(t, err)
+	assert.Equal(t, want, response)
+}
+
+func TestPaginationGetLinksRight2(t *testing.T) {
+	ctx := context.Background()
+	// очистка данных перед тестом
+	_, err := db.Exec(ctx, "DELETE FROM links")
+	assert.NoError(t, err)
+
+	// добавление тестовых данных
+	_, err = db.Exec(ctx, "INSERT INTO links (original_url, short_name) VALUES ('https://example.com/long-url', 'exmpl'), ('https://example.com/long-url1', 'exmpl1'), ('https://example.com/long-url2', 'exmpl2'), ('https://example.com/long-url3', 'exmpl3'), ('https://example.com/long-url4', 'exmpl4'), ('https://example.com/long-url5', 'exmpl5'), ('https://example.com/long-url6', 'exmpl6'), ('https://example.com/long-url7', 'exmpl7')")
+	assert.NoError(t, err)
+
+	// выполнение запроса
+	r, _ := http.NewRequest(http.MethodGet, "/api/links?range=[6,15]", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	// проверка результатов
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response []map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	want := []map[string]any{{"id": float64(7), "original_url": "https://example.com/long-url6", "short_name": "exmpl6", "short_url": nil}, {"id": float64(8), "original_url": "https://example.com/long-url7", "short_name": "exmpl7", "short_url": nil}}
+	assert.NoError(t, err)
+	assert.Equal(t, want, response)
+}
+
+func TestPaginationGetLinksRight3(t *testing.T) {
+	ctx := context.Background()
+	// очистка данных перед тестом
+	_, err := db.Exec(ctx, "DELETE FROM links")
+	assert.NoError(t, err)
+
+	// добавление тестовых данных
+	_, err = db.Exec(ctx, "INSERT INTO links (original_url, short_name) VALUES ('https://example.com/long-url', 'exmpl'), ('https://example.com/long-url1', 'exmpl1'), ('https://example.com/long-url2', 'exmpl2'), ('https://example.com/long-url3', 'exmpl3'), ('https://example.com/long-url4', 'exmpl4'), ('https://example.com/long-url5', 'exmpl5'), ('https://example.com/long-url6', 'exmpl6'), ('https://example.com/long-url7', 'exmpl7')")
+	assert.NoError(t, err)
+
+	// выполнение запроса
+	r, _ := http.NewRequest(http.MethodGet, "/api/links?range=[2, 2]", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	// проверка результатов
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response []map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	want := []map[string]any{{"id": float64(3), "original_url": "https://example.com/long-url2", "short_name": "exmpl2", "short_url": nil}}
+	assert.NoError(t, err)
+	assert.Equal(t, want, response)
+}
+
+func TestPaginationGetLinksWrong(t *testing.T) {
+	ctx := context.Background()
+	// очистка данных перед тестом
+	_, err := db.Exec(ctx, "DELETE FROM links")
+	assert.NoError(t, err)
+
+	// добавление тестовых данных
+	_, err = db.Exec(ctx, "INSERT INTO links (original_url, short_name) VALUES ('https://example.com/long-url', 'exmpl'), ('https://example.com/long-url1', 'exmpl1'), ('https://example.com/long-url2', 'exmpl2'), ('https://example.com/long-url3', 'exmpl3'), ('https://example.com/long-url4', 'exmpl4'), ('https://example.com/long-url5', 'exmpl5'), ('https://example.com/long-url6', 'exmpl6'), ('https://example.com/long-url7', 'exmpl7')")
+	assert.NoError(t, err)
+
+	// выполнение запроса
+	r, _ := http.NewRequest(http.MethodGet, "/api/links?range=[15, 2]", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	// проверка результатов
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	want := map[string]any{"error": "range values ​​are specified incorrectly"}
+	assert.NoError(t, err)
+	assert.Equal(t, want, response)
+}
+
+func TestPaginationGetLinksWrong2(t *testing.T) {
+	ctx := context.Background()
+	// очистка данных перед тестом
+	_, err := db.Exec(ctx, "DELETE FROM links")
+	assert.NoError(t, err)
+
+	// добавление тестовых данных
+	_, err = db.Exec(ctx, "INSERT INTO links (original_url, short_name) VALUES ('https://example.com/long-url', 'exmpl'), ('https://example.com/long-url1', 'exmpl1'), ('https://example.com/long-url2', 'exmpl2'), ('https://example.com/long-url3', 'exmpl3'), ('https://example.com/long-url4', 'exmpl4'), ('https://example.com/long-url5', 'exmpl5'), ('https://example.com/long-url6', 'exmpl6'), ('https://example.com/long-url7', 'exmpl7')")
+	assert.NoError(t, err)
+
+	// выполнение запроса
+	r, _ := http.NewRequest(http.MethodGet, "/api/links?range=[a, 2]", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	// проверка результатов
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	want := map[string]any{"error": "the range must be specified by two numbers, example: [1,4]"}
+	assert.NoError(t, err)
+	assert.Equal(t, want, response)
+}
+
+func TestPaginationGetLinksWrong3(t *testing.T) {
+	ctx := context.Background()
+	// очистка данных перед тестом
+	_, err := db.Exec(ctx, "DELETE FROM links")
+	assert.NoError(t, err)
+
+	// добавление тестовых данных
+	_, err = db.Exec(ctx, "INSERT INTO links (original_url, short_name) VALUES ('https://example.com/long-url', 'exmpl'), ('https://example.com/long-url1', 'exmpl1'), ('https://example.com/long-url2', 'exmpl2'), ('https://example.com/long-url3', 'exmpl3'), ('https://example.com/long-url4', 'exmpl4'), ('https://example.com/long-url5', 'exmpl5'), ('https://example.com/long-url6', 'exmpl6'), ('https://example.com/long-url7', 'exmpl7')")
+	assert.NoError(t, err)
+
+	// выполнение запроса
+	r, _ := http.NewRequest(http.MethodGet, "/api/links?range=[a, 2, 6, 7]", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	// проверка результатов
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	want := map[string]any{"error": "the range must be specified by two numbers, example: [1,4]"}
+	assert.NoError(t, err)
+	assert.Equal(t, want, response)
+}

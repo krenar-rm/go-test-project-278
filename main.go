@@ -53,16 +53,8 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "the range must be specified by two numbers, example: [1,4]"})
 			return
 		}
-		idx0, err := strconv.Atoi(numRange[0])
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid range value 1"})
-			return
-		}
-		idx1, err := strconv.Atoi(numRange[1])
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid range value 2"})
-			return
-		}
+		idx0, _ := strconv.Atoi(numRange[0])
+		idx1, _ := strconv.Atoi(numRange[1])
 		// проверка на положительные значения
 		if idx0 < 0 || idx1 < 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "the range value must be positive"})
