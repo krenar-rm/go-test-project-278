@@ -5,12 +5,12 @@ root * /app/public
 
 # Отдаём /assets/* как есть
 handle /assets/* {
-    file_server
+  file_server
 }
 
 # Отдаём корень как index.html
 handle / {
-    file_server
+  file_server
 }
 
 # Всё остальное — в приложение на 8080
