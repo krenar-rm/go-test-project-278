@@ -28,10 +28,10 @@ func setupRouter() *gin.Engine {
 	// включаем поддержку Cloudflare
 	router.TrustedPlatform = gin.PlatformCloudflare
 	router.ForwardedByClientIP = true
-	router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
+	router.SetTrustedProxies([]string{"127.0.0.1", "::1", "https://go-project-278-yoao.onrender.com"})
 	// настройка политики разрешений
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:5173/", "https://go-project-278-yoao.onrender.com"}
+	config.AllowOrigins = []string{"https://localhost:5173/"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"}
 	config.AllowHeaders = []string{"Origin", "Content-Type"}
 	config.ExposeHeaders = []string{"Content-Range"}
