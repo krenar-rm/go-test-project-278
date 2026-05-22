@@ -31,7 +31,7 @@ func setupRouter() *gin.Engine {
 	router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 	// настройка политики разрешений
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:5173/", "go-project-278-yoao.onrender.com"}
+	config.AllowOrigins = []string{"http://localhost:5173/", "https://go-project-278-yoao.onrender.com"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"}
 	config.AllowHeaders = []string{"Origin", "Content-Type"}
 	config.ExposeHeaders = []string{"Content-Range"}
