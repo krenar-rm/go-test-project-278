@@ -18,7 +18,7 @@ type Link struct {
 
 type LinkVisit struct {
 	ID        int64              `json:"id"`
-	LinkID    pgtype.Int8        `json:"link_id"`
+	LinkID    pgtype.Int4        `json:"link_id"`
 	Ip        pgtype.Text        `json:"ip"`
 	UserAgent pgtype.Text        `json:"user_agent"`
 	Referer   pgtype.Text        `json:"referer"`

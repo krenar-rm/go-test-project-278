@@ -70,7 +70,7 @@ RETURNING id
 `
 
 type CreateLinkVisitsParams struct {
-	LinkID    pgtype.Int8 `json:"link_id"`
+	LinkID    pgtype.Int4 `json:"link_id"`
 	Ip        pgtype.Text `json:"ip"`
 	UserAgent pgtype.Text `json:"user_agent"`
 	Referer   pgtype.Text `json:"referer"`
@@ -192,7 +192,7 @@ type ListLinkVisitsParams struct {
 
 type ListLinkVisitsRow struct {
 	ID        int64              `json:"id"`
-	LinkID    pgtype.Int8        `json:"link_id"`
+	LinkID    pgtype.Int4        `json:"link_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	Ip        pgtype.Text        `json:"ip"`
 	UserAgent pgtype.Text        `json:"user_agent"`

@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS link_visits (
 	id BIGSERIAL PRIMARY KEY,
-	link_id BIGSERIAL,
+	link_id INT,
 	ip VARCHAR(45),
 	user_agent VARCHAR(255),
 	referer TEXT,
