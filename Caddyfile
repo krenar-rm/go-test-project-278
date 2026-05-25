@@ -10,7 +10,7 @@ handle / {
 	file_server
 }
 
-reverse_proxy localhost:9000 {
+reverse_proxy localhost:9443 {
 	transport http {
 		tls
 		tls_insecure_skip_verify
