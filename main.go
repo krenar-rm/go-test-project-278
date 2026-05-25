@@ -26,14 +26,14 @@ import (
 func setupRouter() *gin.Engine {
 	router := gin.Default()
 	// включаем поддержку Cloudflare
-	router.TrustedPlatform = gin.PlatformCloudflare
-	router.ForwardedByClientIP = true
-	// router.SetTrustedProxies([]string{"localhost", "127.0.0.1", "https://go-project-278-yoao.onrender.com/"})
+	// router.TrustedPlatform = gin.PlatformCloudflare
+	// router.ForwardedByClientIP = true
+	router.SetTrustedProxies([]string{"localhost", "127.0.0.1", "https://go-project-278-yoao.onrender.com/"})
 	// настройка политики разрешений
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:5173/"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"}
-	config.AllowHeaders = []string{"Origin", "Content-Type"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Referer"}
 	config.ExposeHeaders = []string{"Content-Range"}
 	router.Use(cors.New(config))
 	// подключаем монитор просмотра ошибок
@@ -280,7 +280,7 @@ func redirectLink(db *generated.Queries) gin.HandlerFunc {
 		linkID := codeParams.ID
 		userAgent := c.Request.UserAgent()
 		ip := c.ClientIP()
-		referer := c.Request.Referer()
+		referer := c.GetHeader("Referer")
 		currentStatus := http.StatusFound
 		visitParams.LinkID = linkID
 		visitParams.UserAgent = pgtype.Text{String: userAgent, Valid: true}

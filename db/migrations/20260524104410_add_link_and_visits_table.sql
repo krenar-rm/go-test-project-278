@@ -24,6 +24,6 @@ CREATE TABLE IF NOT EXISTS link_visits (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS link_visits;
 DROP TABLE IF EXISTS links;
+DROP TABLE IF EXISTS link_visits;
 -- +goose StatementEnd
