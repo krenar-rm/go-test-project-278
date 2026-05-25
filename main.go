@@ -396,6 +396,6 @@ func main() {
 	r.PUT("api/links/:id", updateLink(queries))
 	r.DELETE("api/links/:id", deleteLink(queries))
 
-	// запускаем сервер на порту 8080
-	r.Run(":8080")
+	// запускаем сервер на порту 9000
+	r.Run(":9000")
 }
