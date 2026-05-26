@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jxskiss/base62"
@@ -102,12 +102,12 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 			return
 		}
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "database error"})
 			return
 		}
 		count, err := db.CounterLinks(c)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to count the number of records"})
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "unable to count the number of records"})
 			return
 		}
 		headerVal := fmt.Sprintf("links: %d-%d/%d", idx0, idx1, count)
@@ -125,18 +125,18 @@ func createLink(db *generated.Queries) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 			return
 		}
-		origUrlTxt := link.OriginalUrl
-		var origUrl string
+		origUrl := link.OriginalUrl
 		// проверка на ввод url адреса
-		if origUrlTxt == "" {
+		if origUrl == "" {
 			msg := fmt.Sprintf(`{"original_url": "URL address cannot be empty"}`)
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": msg})
 			return
 		}
 		// проверка корректности ввода адреса
-		_, err := url.ParseRequestURI(origUrl)
+		validate := validator.New()
+		err := validate.Var(origUrl, "url")
 		if err != nil {
-			msg := fmt.Sprintf(`{"original_url": "URL address incorrect"}`)
+			msg := fmt.Sprintf(`{"original_url": "URL '%s' address incorrect"}`, origUrl)
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": msg})
 			return
 		}
