@@ -178,6 +178,10 @@ func createLink(db *generated.Queries) gin.HandlerFunc {
 			lastID := fmt.Sprintf("%d", lastRec.ID+1)
 			// кодируем в Base62
 			shortName = base62.EncodeToString([]byte(lastID))
+			// если длина сгенерированного имени меньше 3
+			if len(shortName) < 3 {
+				shortName = shortName + shortName + shortName
+			}
 			link.ShortName = pgtype.Text{String: shortName, Valid: true}
 		}
 		// создаём короткое имя ссылки
