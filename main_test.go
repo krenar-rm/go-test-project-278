@@ -106,7 +106,7 @@ func TestPingRouteTableDriven(t *testing.T) {
 		wantCode int
 		wantBody string
 	}{
-		{"ping endpoint", "GET", "/ping", 200, `{"data": "pong"}`},
+		{"ping endpoint", "GET", "/ping", 200, "pong"},
 		{"not found", "GET", "/nonexistent", 404, ""},
 	}
 

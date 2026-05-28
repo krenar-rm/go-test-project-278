@@ -50,7 +50,7 @@ func setupRouter() *gin.Engine {
 	router.Use(gin.Logger())
 	// задаём стандартный маршрут '/ping'
 	router.GET("/ping", func(c *gin.Context) {
-		c.String(http.StatusOK, `{"data": "pong"}`)
+		c.String(http.StatusOK, "pong")
 	})
 	return router
 }
@@ -125,7 +125,7 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 // структура для валидации полей original_url и short_name
 type UserRequest struct {
 	OriginalUrl string      `json:"original_url" binding:"required,url"`
-	ShortName   pgtype.Text `json:"short_name" binding:"unique,min=3,max=32"`
+	ShortName   pgtype.Text `json:"short_name" binding:"min=3,max=32"`
 }
 
 // создание новой записи
