@@ -4,6 +4,7 @@ import (
 	generated "code/db/generated"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -49,9 +50,7 @@ func setupRouter() *gin.Engine {
 	router.Use(gin.Logger())
 	// задаём стандартный маршрут '/ping'
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"data": "pong",
-		})
+		c.String(http.StatusOK, `{"data": "pong"}`)
 	})
 	return router
 }
@@ -123,51 +122,33 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 	}
 }
 
+// структура для валидации полей original_url и short_name
+type UserRequest struct {
+	OriginalUrl string      `json:"original_url" binding:"required,url"`
+	ShortName   pgtype.Text `json:"short_name" binding:"unique,min=3,max=32"`
+}
+
 // создание новой записи
 func createLink(db *generated.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var req UserRequest
 		var link generated.CreateLinkParams
-		if err := c.ShouldBindJSON(&link); err != nil {
+		// парсинг запроса и проверка данных
+		if err := c.ShouldBindJSON(&req); err != nil {
+			var ve validator.ValidationErrors
+			if errors.As(err, &ve) {
+				errorsMap := make(map[string]string)
+				for _, e := range ve {
+					errorsMap[e.Field()] = e.Tag()
+				}
+				c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errorsMap})
+				return
+			}
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 			return
 		}
-		origUrl := link.OriginalUrl
-		// проверка на ввод url адреса
-		if origUrl == "" {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"original_url": "URL address cannot be empty"})
-			return
-		}
-		// проверка корректности ввода адреса
-		validate := validator.New()
-		err := validate.Var(origUrl, "url")
-		if err != nil {
-			msg := fmt.Sprintf(`{"original_url": "URL '%s' address incorrect"}`, origUrl)
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": msg})
-			return
-		}
-		// проверка длины адреса
-		if len(origUrl) < 10 {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"original_url": "URL address is quite short"})
-			return
-		}
-		shortNameTxt := link.ShortName
-		var shortName string
-		// проверка ввода короткого имени
-		if shortNameTxt.Valid {
-			shortName = shortNameTxt.String
-		}
-		// проверка длины короткого имени
-		if shortName != "" && (len(shortName) < 3 || len(shortName) > 32) {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"short_name": "length must be from 3 to 32 symbols"})
-			return
-		}
-		// проверяем короткое имя на уникальность
-		rec, _ := db.GetLinkFromCode(c, shortNameTxt)
-		emptyRec := generated.GetLinkFromCodeRow{}
-		if rec != emptyRec {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"short_name": "short name already in use"})
-			return
-		}
+		link.OriginalUrl = req.OriginalUrl
+		shortName := req.ShortName.String
 		// если имя не введено, то генерируем имя
 		if shortName == "" {
 			lastRec, err := db.LastLink(c)
@@ -195,10 +176,10 @@ func createLink(db *generated.Queries) gin.HandlerFunc {
 			return
 		}
 		// добавляем короткую ссылку к записи
-		var shortNameParams generated.CreateShortNameParams
+		var shortNameParams generated.UpdateShortNameParams
 		shortNameParams.ID = res.ID
 		shortNameParams.ShortUrl = shortUrlTxt
-		err = db.CreateShortName(c, shortNameParams)
+		err = db.UpdateShortName(c, shortNameParams)
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"short_name": "unable to add short name to record"})
 			return
@@ -207,9 +188,16 @@ func createLink(db *generated.Queries) gin.HandlerFunc {
 	}
 }
 
+// структура для валидации полей original_url и short_name
+type UserUpdateRequest struct {
+	OriginalUrl string `json:"original_url" binding:"url"`
+	ShortName   string `json:"short_name" binding:"min=3,max=32"`
+}
+
 // обновление записи
 func updateLink(db *generated.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var req UserUpdateRequest
 		var updLink generated.UpdateLinkParams
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -218,20 +206,45 @@ func updateLink(db *generated.Queries) gin.HandlerFunc {
 			return
 		}
 		// проверка записи в БД
-		_, err = db.GetLink(c, id)
+		link, err := db.GetLink(c, id)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"update link": "link does not exist"})
 			return
 		}
-		updLink.ID = id
-		if err := c.ShouldBindJSON(&updLink); err != nil {
+		// парсинг и валидация данных
+		if err := c.ShouldBindJSON(&req); err != nil {
+			var ve validator.ValidationErrors
+			if errors.As(err, &ve) {
+				errorsMap := make(map[string]string)
+				for _, e := range ve {
+					errorsMap[e.Field()] = e.Tag()
+				}
+				c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errorsMap})
+				return
+			}
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 			return
 		}
+		updLink.ID = id
+		updLink.OriginalUrl = req.OriginalUrl
+		updLink.ShortName = pgtype.Text{String: req.ShortName, Valid: true}
 		res := db.UpdateLink(c, updLink)
 		if res != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"update link": "unable to update data"})
 			return
+		}
+		// проверка изменения поля short_name
+		if link.ShortName.String != req.ShortName {
+			shortUrl := fmt.Sprintf("https://go-project-278-yoao.onrender.com/r/%s", req.ShortName)
+			// изменяем короткую ссылку записи
+			var shortNameParams generated.UpdateShortNameParams
+			shortNameParams.ID = link.ID
+			shortNameParams.ShortUrl = pgtype.Text{String: shortUrl, Valid: true}
+			err = db.UpdateShortName(c, shortNameParams)
+			if err != nil {
+				c.JSON(http.StatusUnprocessableEntity, gin.H{"short_name": "unable to add short name to record"})
+				return
+			}
 		}
 		c.JSON(http.StatusOK, res)
 	}

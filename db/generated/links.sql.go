@@ -98,22 +98,6 @@ func (q *Queries) CreateLinkVisits(ctx context.Context, arg CreateLinkVisitsPara
 	return i, err
 }
 
-const createShortName = `-- name: CreateShortName :exec
-UPDATE links
-SET short_url = $2
-WHERE id = $1
-`
-
-type CreateShortNameParams struct {
-	ID       int64       `json:"id"`
-	ShortUrl pgtype.Text `json:"short_url"`
-}
-
-func (q *Queries) CreateShortName(ctx context.Context, arg CreateShortNameParams) error {
-	_, err := q.db.Exec(ctx, createShortName, arg.ID, arg.ShortUrl)
-	return err
-}
-
 const deleteLink = `-- name: DeleteLink :exec
 DELETE FROM links
 WHERE id = $1
@@ -292,5 +276,21 @@ type UpdateLinkParams struct {
 
 func (q *Queries) UpdateLink(ctx context.Context, arg UpdateLinkParams) error {
 	_, err := q.db.Exec(ctx, updateLink, arg.ID, arg.OriginalUrl, arg.ShortName)
+	return err
+}
+
+const updateShortName = `-- name: UpdateShortName :exec
+UPDATE links
+SET short_url = $2
+WHERE id = $1
+`
+
+type UpdateShortNameParams struct {
+	ID       int64       `json:"id"`
+	ShortUrl pgtype.Text `json:"short_url"`
+}
+
+func (q *Queries) UpdateShortName(ctx context.Context, arg UpdateShortNameParams) error {
+	_, err := q.db.Exec(ctx, updateShortName, arg.ID, arg.ShortUrl)
 	return err
 }

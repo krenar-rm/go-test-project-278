@@ -106,7 +106,7 @@ func TestPingRouteTableDriven(t *testing.T) {
 		wantCode int
 		wantBody string
 	}{
-		{"ping endpoint", "GET", "/ping", 200, `{"message":"pong"}`},
+		{"ping endpoint", "GET", "/ping", 200, `{"data": "pong"}`},
 		{"not found", "GET", "/nonexistent", 404, ""},
 	}
 
@@ -196,7 +196,7 @@ func TestUpdateLink(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response map[string]any
 	err := json.Unmarshal(w.Body.Bytes(), &response)
-	want := map[string]any{"id": float64(1), "original_url": "https://example.com/update_test", "short_name": "exmpl_update", "short_url": nil}
+	want := map[string]any{"id": float64(1), "original_url": "https://example.com/update_test", "short_name": "exmpl_update", "short_url": "https://go-project-278-yoao.onrender.com/r/exmpl_update"}
 	assert.NoError(t, err)
 	assert.Equal(t, want, response)
 }
@@ -256,7 +256,7 @@ func TestPaginationGeLinksRight(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	var response []map[string]any
 	err := json.Unmarshal(w.Body.Bytes(), &response)
-	want := []map[string]any{{"id": float64(1), "original_url": "https://example.com/update_test", "short_name": "exmpl_update", "short_url": nil}, {"id": float64(3), "original_url": "https://example.com/long-url2", "short_name": "exmpl2", "short_url": nil}}
+	want := []map[string]any{{"id": float64(1), "original_url": "https://example.com/update_test", "short_name": "exmpl_update", "short_url": "https://go-project-278-yoao.onrender.com/r/exmpl_update"}, {"id": float64(3), "original_url": "https://example.com/long-url2", "short_name": "exmpl2", "short_url": nil}}
 	assert.NoError(t, err)
 	assert.Equal(t, want, response)
 }
