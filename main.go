@@ -124,8 +124,8 @@ func listLinks(db *generated.Queries) gin.HandlerFunc {
 
 // структура для валидации полей original_url и short_name
 type UserRequest struct {
-	OriginalUrl string      `json:"original_url" binding:"required,url"`
-	ShortName   pgtype.Text `json:"short_name" binding:"min=3,max=32"`
+	OriginalUrl string `json:"original_url" binding:"required,url"`
+	ShortName   string `json:"short_name" binding:"min=3,max=32"`
 }
 
 // создание новой записи
@@ -148,7 +148,7 @@ func createLink(db *generated.Queries) gin.HandlerFunc {
 			return
 		}
 		link.OriginalUrl = req.OriginalUrl
-		shortName := req.ShortName.String
+		shortName := req.ShortName
 		// если имя не введено, то генерируем имя
 		if shortName == "" {
 			lastRec, err := db.LastLink(c)
