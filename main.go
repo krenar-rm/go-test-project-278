@@ -9,22 +9,41 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jxskiss/base62"
 )
 
+// заставляем validator возвращать имена полей из json-тегов,
+// чтобы клиенты получали ошибки вида {"original_url": "required"}
+// вместо имени Go-поля {"OriginalUrl": "required"}
+func registerJSONFieldNames() {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+			if name == "-" {
+				return ""
+			}
+			return name
+		})
+	}
+}
+
 // создание маршрутизатора Gin
 func setupRouter() *gin.Engine {
+	registerJSONFieldNames()
 	router := gin.Default()
 	// включаем поддержку Cloudflare
 	router.TrustedPlatform = gin.PlatformCloudflare
@@ -128,6 +147,15 @@ type UserRequest struct {
 	ShortName   string `json:"short_name"`
 }
 
+// ответ с данными ссылки: обычные типы без pgtype-обёрток и без created_at,
+// формат совпадает с остальными ручками и с README
+type linkResponse struct {
+	ID          int64  `json:"id"`
+	OriginalUrl string `json:"original_url"`
+	ShortName   string `json:"short_name"`
+	ShortUrl    string `json:"short_url"`
+}
+
 // создание новой записи
 func createLink(db *generated.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -148,43 +176,54 @@ func createLink(db *generated.Queries) gin.HandlerFunc {
 			return
 		}
 		link.OriginalUrl = req.OriginalUrl
-		shortName := req.ShortName
-		// если имя не введено, то генерируем имя
-		if shortName == "" {
-			lastRec, err := db.LastLink(c)
-			if err != nil {
-				c.JSON(http.StatusUnprocessableEntity, gin.H{"last link": "unable to get the latest entry"})
-				return
-			}
-			// получаем текущий ID записи
-			lastID := fmt.Sprintf("%d", lastRec.ID+1)
-			// кодируем в Base62
-			shortName = base62.EncodeToString([]byte(lastID))
-			// если длина сгенерированного имени меньше 3
-			if len(shortName) < 3 {
-				shortName = shortName + shortName + shortName
-			}
-			link.ShortName = pgtype.Text{String: shortName, Valid: true}
+		// если имя задал пользователь — пишем его сразу; если нет — оставляем
+		// NULL и сгенерируем имя из id уже созданной записи
+		if req.ShortName != "" {
+			link.ShortName = pgtype.Text{String: req.ShortName, Valid: true}
 		}
-		// создаём короткое имя ссылки
-		shortUrl := fmt.Sprintf("https://go-project-278-yoao.onrender.com/r/%s", shortName)
-		shortUrlTxt := pgtype.Text{String: shortUrl, Valid: true}
-		// cоздаём запись
+		// создаём запись и получаем сгенерированный БД id
 		res, err := db.CreateLink(c, link)
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"create link": "unable to create records"})
 			return
 		}
-		// добавляем короткую ссылку к записи
-		var shortNameParams generated.UpdateShortNameParams
-		shortNameParams.ID = res.ID
-		shortNameParams.ShortUrl = shortUrlTxt
-		err = db.UpdateShortName(c, shortNameParams)
-		if err != nil {
+		shortName := req.ShortName
+		// автогенерация имени из id созданной записи: не зависит от наличия
+		// предыдущих записей, поэтому работает и на пустой БД, и при гонке
+		if shortName == "" {
+			shortName = base62.EncodeToString([]byte(fmt.Sprintf("%d", res.ID)))
+			// гарантируем минимальную длину 3 (ограничение схемы)
+			if len(shortName) < 3 {
+				shortName = shortName + shortName + shortName
+			}
+			// дописываем сгенерированное имя в созданную запись
+			updParams := generated.UpdateLinkParams{
+				ID:          res.ID,
+				OriginalUrl: res.OriginalUrl,
+				ShortName:   pgtype.Text{String: shortName, Valid: true},
+			}
+			if err := db.UpdateLink(c, updParams); err != nil {
+				c.JSON(http.StatusUnprocessableEntity, gin.H{"short_name": "unable to set generated short name"})
+				return
+			}
+		}
+		// формируем короткую ссылку и сохраняем её
+		shortUrl := fmt.Sprintf("https://go-project-278-yoao.onrender.com/r/%s", shortName)
+		shortNameParams := generated.UpdateShortNameParams{
+			ID:       res.ID,
+			ShortUrl: pgtype.Text{String: shortUrl, Valid: true},
+		}
+		if err := db.UpdateShortName(c, shortNameParams); err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"short_name": "unable to add short name to record"})
 			return
 		}
-		c.JSON(http.StatusCreated, res)
+		// возвращаем чистый DTO без created_at / pgtype-обёрток
+		c.JSON(http.StatusCreated, linkResponse{
+			ID:          res.ID,
+			OriginalUrl: res.OriginalUrl,
+			ShortName:   shortName,
+			ShortUrl:    shortUrl,
+		})
 	}
 }
 
@@ -208,7 +247,7 @@ func updateLink(db *generated.Queries) gin.HandlerFunc {
 		// проверка записи в БД
 		link, err := db.GetLink(c, id)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"update link": "link does not exist"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "link does not exist"})
 			return
 		}
 		// парсинг и валидация данных
@@ -228,9 +267,8 @@ func updateLink(db *generated.Queries) gin.HandlerFunc {
 		updLink.ID = id
 		updLink.OriginalUrl = req.OriginalUrl
 		updLink.ShortName = pgtype.Text{String: req.ShortName, Valid: true}
-		res := db.UpdateLink(c, updLink)
-		if res != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{"update link": "unable to update data"})
+		if err := db.UpdateLink(c, updLink); err != nil {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "unable to update data"})
 			return
 		}
 		// проверка изменения поля short_name
@@ -246,7 +284,13 @@ func updateLink(db *generated.Queries) gin.HandlerFunc {
 				return
 			}
 		}
-		c.JSON(http.StatusOK, res)
+		// возвращаем актуальное состояние записи, а не пустой результат :exec
+		updated, err := db.GetLink(c, id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to fetch updated link"})
+			return
+		}
+		c.JSON(http.StatusOK, updated)
 	}
 }
 
